@@ -58,7 +58,7 @@ To use it, you must add a script reference to the bottom of your nominated searc
 2. Add a script reference to the bottom of your nominated search page for `jquery.lunr.search.js` and each of the dependencies outlined above.
 
         <script src="/js/jquery-1.9.1.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="/js/lunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="/js/lunr.js" type="text/javascript" charset="utf-8"></script>
         <script src="/js/mustache.js" type="text/javascript" charset="utf-8"></script>
         <script src="/js/date.format.js" type="text/javascript" charset="utf-8"></script>
         <script src="/js/URI.min.js" type="text/javascript" charset="utf-8"></script>
@@ -167,7 +167,7 @@ The stopwords file must consist of one word per line, in lowercase, without punc
 
 ### 10. Alternate data directory
 
-You can choose to store `index.json`, `search.min.js` and `lunr.min.js` in a different directory like this:
+You can choose to store `index.json`, `search.min.js` and `lunr.js` in a different directory like this:
 
     lunr_search:
       js_dir: "javascript"
