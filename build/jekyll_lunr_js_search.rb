@@ -25,21 +25,16 @@ module Jekyll
         }.merge!(config['lunr_search'] || {})
 
         @js_dir = lunr_config['js_dir']
-        gem_lunr = File.join(File.dirname(__FILE__), "../../build/lunr.js")
+        gem_lunr = File.join(File.dirname(__FILE__), '../../build/lunr.js')
         @lunr_path = File.exist?(gem_lunr) ? gem_lunr : File.join(@js_dir, File.basename(gem_lunr))
-        raise "Could not find #{@lunr_path}" if !File.exist?(@lunr_path)
+        raise "Could not find #{@lunr_path}" unless File.exist?(@lunr_path)
 
-        ctx = V8::Context.new
-        ctx.load(@lunr_path)
-        ctx['indexer'] = proc do |this|
-          this.ref('id')
-          lunr_config['fields'].each_pair do |name, boost|
-            this.field(name, { 'boost' => boost })
-          end
-        end
-        @index = ctx.eval('lunr(indexer)')
-        @lunr_version = ctx.eval('lunr.version')
+        @ctx = V8::Context.new
+        @ctx.load(@lunr_path)
+
         @docs = {}
+
+        @lunr_version = @ctx.eval('lunr.version')
         @excludes = lunr_config['excludes']
 
         # if web host supports index.html as default doc, then optionally exclude it from the url
@@ -59,7 +54,6 @@ module Jekyll
         # gather pages and posts
         items = pages_to_index(site)
         content_renderer = PageRenderer.new(site)
-        index = []
 
         items.each_with_index do |item, i|
           entry = SearchEntry.create(item, content_renderer)
@@ -78,9 +72,24 @@ module Jekyll
             "body" => entry.body
           }
 
-          @index.add(doc)
-          doc.delete("body")
+          # TODO find a way to work with the immutable lunr 2.x index wihtout keeping all document bodies in memory.
+          #  (e.g. via the explicit lunr.Builder() object instead of the lunr(config) shortcut?  Or in a smarter way in ruby.
           @docs[i] = doc
+
+          @ctx['indexer'] = proc do |this|
+            this.ref('id')
+            lunr_config['fields'].each_pair do |name, boost|
+              this.field(name, { 'boost' => boost })
+            end
+            @docs.each_value do |doc|
+              this.add(doc)
+            end
+          end
+          @index = @ctx.eval('lunr(indexer)')
+
+          @docs.each_value do |doc|
+            doc.delete("body")
+          end
 
           Jekyll.logger.debug "Lunr:", (entry.title ? "#{entry.title} (#{entry.url})" : entry.url)
         end
