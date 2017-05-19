@@ -114,8 +114,6 @@ module Jekyll
         # working variant inside Javascript:
         # @ctx.eval('JSON.stringify(jsLunr_builder.build().toJSON())')
 
-        Jekyll.logger.debug 'Lunr:', "file data:  #{JSON.dump(export)}"
-
         filepath = File.join(site.dest, filename)
         File.open(filepath, 'w') { |f| f.write(JSON.dump(export)) }
         Jekyll.logger.info 'Lunr:', "Index ready (lunr.js v#{@js_lunr.version})"

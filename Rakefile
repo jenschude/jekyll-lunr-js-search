@@ -52,12 +52,22 @@ task :concat_js do
 
   # Lunr is stored separately so we can use it for index generation
   FileUtils.cp('bower_components/lunr.js/lunr.js', 'build/lunr.js')
+  # Search client is stored separately so users can manage the dependencies separately
+  FileUtils.cp('js/jquery.lunr.search.js', 'build/jquery.lunr.search.js')
 end
 
 task :minify_js do
   minified, map = Uglifier.new.compile(File.read('build/search.js'))
   File.open('build/search.min.js', 'w') do |file|
     file.puts minified
+  end
+  minified_standalone, map = Uglifier.new.compile(File.read('build/jquery.lunr.search.js'))
+  File.open('build/jquery.lunr.search.min.js', 'w') do |file|
+    file.puts minified_standalone
+  end
+  minified_lunr, map = Uglifier.new.compile(File.read('build/lunr.js'))
+  File.open('build/lunr.min.js', 'w') do |file|
+    file.puts minified_lunr
   end
 end
 
