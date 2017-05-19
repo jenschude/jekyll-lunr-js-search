@@ -25,7 +25,7 @@ module Jekyll
           'js_dir' => 'js'
         }.merge!(config['lunr_search'] || {})
 
-        @js_dir = @lunr_config['js_dir']
+        @js_dir = lunr_config['js_dir']
         gem_lunr = File.join(File.dirname(__FILE__), '../../build/lunr.js')
         @lunr_path = File.exist?(gem_lunr) ? gem_lunr : File.join(@js_dir, File.basename(gem_lunr))
         raise "Could not find #{@lunr_path}" unless File.exist?(@lunr_path)
@@ -41,11 +41,9 @@ module Jekyll
 
         Jekyll.logger.debug 'Lunr:', @js_lunr.version
 
-        @js_lunr_builder.pipeline.add(@js_lunr['trimmer'],
-                                    @js_lunr.['stopWordFilter'],
-                                    @js_lunr.['stemmer'])
+        @js_lunr_builder.pipeline.add(@js_lunr['trimmer'], @js_lunr['stopWordFilter'], @js_lunr['stemmer'])
 
-        @js_lunr_builder.searchPipeline.add(@js_lunr.['stemmer'])
+        @js_lunr_builder.searchPipeline.add(@js_lunr['stemmer'])
 
         lunr_config['fields'].each_pair do |name, boost|
           @js_lunr_builder.field(name, { 'boost' => boost })
@@ -66,7 +64,7 @@ module Jekyll
       # Index all pages except pages matching any value in config['lunr_excludes'] or with date['exclude_from_search']
       # The main content from each page is extracted and saved to disk as json
       def generate(site)
-        Jekyll.logger.info "Lunr:", 'Creating search index...'
+        Jekyll.logger.info 'Lunr:', 'Creating search index...'
 
         @site = site
         # gather pages and posts
@@ -77,53 +75,53 @@ module Jekyll
           entry = SearchEntry.create(item, content_renderer)
 
           entry.strip_index_suffix_from_url! if @strip_index_html
-          entry.strip_stopwords!(stopwords, @min_length) if File.exists?(@stopwords_file)
+          entry.strip_stopwords!(stopwords, @min_length) if File.exist?(@stopwords_file)
 
           doc = {
-            "id" => i,
-            "title" => entry.title,
-            "url" => entry.url,
-            "date" => entry.date,
-            "categories" => entry.categories,
-            "tags" => entry.tags,
-            "is_post" => entry.is_post,
-            "body" => entry.body
+            'id' => i,
+            'title' => entry.title,
+            'url' => entry.url,
+            'date' => entry.date,
+            'categories' => entry.categories,
+            'tags' => entry.tags,
+            'is_post' => entry.is_post,
+            'body' => entry.body
           }
 
           @js_lunr_builder.add(doc)
 
-          doc.delete("body")
+          doc.delete('body')
 
-          Jekyll.logger.debug "Lunr:", (entry.title ? "#{entry.title} (#{entry.url})" : entry.url)
+          Jekyll.logger.debug 'Lunr:', (entry.title ? "#{entry.title} (#{entry.url})" : entry.url)
         end
 
         FileUtils.mkdir_p(File.join(site.dest, @js_dir))
         filename = File.join(@js_dir, 'index.json')
 
         export = {
-          "docs" => @docs,
-          "index" => @js_lunr_builder.build
+            'docs' => @docs,
+            'index' => @js_lunr_builder.build
         }
 
         filepath = File.join(site.dest, filename)
-        File.open(filepath, "w") { |f| f.write(JSON.dump(export)) }
-        Jekyll.logger.info "Lunr:", "Index ready (lunr.js v#{@js_lunr.version})"
+        File.open(filepath, 'w') { |f| f.write(JSON.dump(export)) }
+        Jekyll.logger.info 'Lunr:', "Index ready (lunr.js v#{@js_lunr.version})"
         added_files = [filename]
 
         site_js = File.join(site.dest, @js_dir)
 
         # If we're using the gem, add the lunr and search JS files to the _site
         if File.expand_path(site_js) != File.dirname(@lunr_path)
-          extras = Dir.glob(File.join(File.dirname(@lunr_path), "*.min.js"))
+          extras = Dir.glob(File.join(File.dirname(@lunr_path), '*.min.js'))
           FileUtils.cp(extras, site_js)
           extras.map! { |min| File.join(@js_dir, File.basename(min)) }
-          Jekyll.logger.debug "Lunr:", "Added JavaScript to #{@js_dir}"
+          Jekyll.logger.debug 'Lunr:', "Added JavaScript to #{@js_dir}"
           added_files.push(*extras)
         end
 
         # Keep the written files from being cleaned by Jekyll
         added_files.each do |filename|
-          site.static_files << SearchIndexFile.new(site, site.dest, "/", filename)
+          site.static_files << SearchIndexFile.new(site, site.dest, '/', filename)
         end
       end
 
@@ -146,12 +144,12 @@ module Jekyll
         items = []
 
         # deep copy pages and documents (all collections, including posts)
-        site.pages.each {|page| items << page.dup }
-        site.documents.each {|document| items << document.dup }
+        site.pages.each { |page| items << page.dup }
+        site.documents.each { |document| items << document.dup }
 
         # only process files that will be converted to .html and only non excluded files
-        items.select! {|i| i.respond_to?(:output_ext) && output_ext(i) == '.html' && ! @excludes.any? {|s| (i.url =~ Regexp.new(s)) != nil } }
-        items.reject! {|i| i.data['exclude_from_search'] }
+        items.select! { |i| i.respond_to?(:output_ext) && output_ext(i) == '.html' && !@excludes.any? {|s| (i.url =~ Regexp.new(s)) != nil } }
+        items.reject! { |i| i.data['exclude_from_search'] }
 
         items
       end
