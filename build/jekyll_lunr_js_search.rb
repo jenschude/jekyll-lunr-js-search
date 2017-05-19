@@ -98,10 +98,14 @@ module Jekyll
         FileUtils.mkdir_p(File.join(site.dest, @js_dir))
         filename = File.join(@js_dir, 'index.json')
 
+        Jekyll.logger.debug 'Lunr:', "created file #{filename}"
+
         export = {
             'docs' => @docs,
-            'index' => @js_lunr_builder.build
+            'index' => @js_lunr_builder.build()
         }
+
+        Jekyll.logger.debug 'Lunr:', "file data:  #{JSON.dump(export)}"
 
         filepath = File.join(site.dest, filename)
         File.open(filepath, 'w') { |f| f.write(JSON.dump(export)) }
