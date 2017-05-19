@@ -31,20 +31,27 @@ module Jekyll
         raise "Could not find #{@lunr_path}" unless File.exist?(@lunr_path)
 
         @ctx = V8::Context.new
+
+        Jekyll.logger.debug 'Lunr:', 'Initializing lunr engine in V8'
+
         @ctx.load(@lunr_path)
 
-        @js_lunr = cxt.eval('jsLunr = lunr')
-        @js_lunr_builder = cxt.eval('jsLunr_builder = new lunr.Builder;')
+        @js_lunr = @ctx.eval('jsLunr = lunr')
+        @js_lunr_builder = @ctx.eval('jsLunr_builder = new lunr.Builder;')
 
-        @js_lunr_builder.pipeline.add(@js_lunr.trimmer,
-                                    @js_lunr.stopWordFilter,
-                                    @js_lunr.stemmer)
+        Jekyll.logger.debug 'Lunr:', @js_lunr.version
 
-        @js_lunr_builder.searchPipeline.add(@js_lunr.stemmer)
+        @js_lunr_builder.pipeline.add(@js_lunr['trimmer'],
+                                    @js_lunr.['stopWordFilter'],
+                                    @js_lunr.['stemmer'])
+
+        @js_lunr_builder.searchPipeline.add(@js_lunr.['stemmer'])
 
         lunr_config['fields'].each_pair do |name, boost|
           @js_lunr_builder.field(name, { 'boost' => boost })
         end
+
+        Jekyll.logger.debug 'Lunr:', 'Initialized lunr engine in V8'
 
         @excludes = lunr_config['excludes']
 
@@ -95,7 +102,7 @@ module Jekyll
 
         export = {
           "docs" => @docs,
-          "index" => @js_lunr_builder.build()
+          "index" => @js_lunr_builder.build
         }
 
         filepath = File.join(site.dest, filename)
