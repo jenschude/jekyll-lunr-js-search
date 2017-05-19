@@ -3,6 +3,7 @@ require 'net/http'
 require 'json'
 require 'uri'
 require 'v8'
+require 'json'
 
 module Jekyll
   module LunrJsSearch
@@ -10,7 +11,7 @@ module Jekyll
       def initialize(config = {})
         super(config)
 
-        @lunr_config = {
+        lunr_config = {
           'excludes' => [],
           'strip_index_html' => false,
           'min_length' => 3,
@@ -32,17 +33,27 @@ module Jekyll
         @ctx = V8::Context.new
         @ctx.load(@lunr_path)
 
-        @docs = {}
+        @js_lunr = cxt.eval('jsLunr = lunr')
+        @js_lunr_builder = cxt.eval('jsLunr_builder = new lunr.Builder;')
 
-        @lunr_version = @ctx.eval('lunr.version')
-        @excludes = @lunr_config['excludes']
+        @js_lunr_builder.pipeline.add(@js_lunr.trimmer,
+                                    @js_lunr.stopWordFilter,
+                                    @js_lunr.stemmer)
+
+        @js_lunr_builder.searchPipeline.add(@js_lunr.stemmer)
+
+        lunr_config['fields'].each_pair do |name, boost|
+          @js_lunr_builder.field(name, { 'boost' => boost })
+        end
+
+        @excludes = lunr_config['excludes']
 
         # if web host supports index.html as default doc, then optionally exclude it from the url
-        @strip_index_html = @lunr_config['strip_index_html']
+        @strip_index_html = lunr_config['strip_index_html']
 
         # stop word exclusion configuration
-        @min_length = @lunr_config['min_length']
-        @stopwords_file = @lunr_config['stopwords']
+        @min_length = lunr_config['min_length']
+        @stopwords_file = lunr_config['stopwords']
       end
 
       # Index all pages except pages matching any value in config['lunr_excludes'] or with date['exclude_from_search']
@@ -72,24 +83,9 @@ module Jekyll
             "body" => entry.body
           }
 
-          # TODO find a way to work with the immutable lunr 2.x index wihtout keeping all document bodies in memory.
-          #  (e.g. via the explicit lunr.Builder() object instead of the lunr(config) shortcut?  Or in a smarter way in ruby.
-          @docs[i] = doc
+          @js_lunr_builder.add(doc)
 
-          @ctx['indexer'] = proc do |this|
-            this.ref('id')
-            @lunr_config['fields'].each_pair do |name, boost|
-              this.field(name, { 'boost' => boost })
-            end
-            @docs.each_value do |doc|
-              this.add(doc)
-            end
-          end
-          @index = @ctx.eval('lunr(indexer)')
-
-          @docs.each_value do |doc|
-            doc.delete("body")
-          end
+          doc.delete("body")
 
           Jekyll.logger.debug "Lunr:", (entry.title ? "#{entry.title} (#{entry.url})" : entry.url)
         end
@@ -97,17 +93,18 @@ module Jekyll
         FileUtils.mkdir_p(File.join(site.dest, @js_dir))
         filename = File.join(@js_dir, 'index.json')
 
-        total = {
+        export = {
           "docs" => @docs,
-          "index" => @index.to_hash
+          "index" => @js_lunr_builder.build()
         }
 
         filepath = File.join(site.dest, filename)
-        File.open(filepath, "w") { |f| f.write(JSON.dump(total)) }
-        Jekyll.logger.info "Lunr:", "Index ready (lunr.js v#{@lunr_version})"
+        File.open(filepath, "w") { |f| f.write(JSON.dump(export)) }
+        Jekyll.logger.info "Lunr:", "Index ready (lunr.js v#{@js_lunr.version})"
         added_files = [filename]
 
         site_js = File.join(site.dest, @js_dir)
+
         # If we're using the gem, add the lunr and search JS files to the _site
         if File.expand_path(site_js) != File.dirname(@lunr_path)
           extras = Dir.glob(File.join(File.dirname(@lunr_path), "*.min.js"))
