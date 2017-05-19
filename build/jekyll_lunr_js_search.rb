@@ -71,6 +71,8 @@ module Jekyll
         items = pages_to_index(site)
         content_renderer = PageRenderer.new(site)
 
+        @docs = {}
+
         items.each_with_index do |item, i|
           entry = SearchEntry.create(item, content_renderer)
 
@@ -92,6 +94,8 @@ module Jekyll
 
           doc.delete('body')
 
+          @docs[i] = doc
+
           Jekyll.logger.debug 'Lunr:', (entry.title ? "#{entry.title} (#{entry.url})" : entry.url)
         end
 
@@ -100,10 +104,15 @@ module Jekyll
 
         Jekyll.logger.debug 'Lunr:', "created file #{filename}"
 
+        js_index = @js_lunr_builder.build().toJSON()
+
         export = {
-            'docs' => @docs,
-            'index' => @js_lunr_builder.build()
+          'docs' => @docs,
+          'index' => js_index.to_hash
         }
+
+        # working variant inside Javascript:
+        # @ctx.eval('JSON.stringify(jsLunr_builder.build().toJSON())')
 
         Jekyll.logger.debug 'Lunr:', "file data:  #{JSON.dump(export)}"
 
