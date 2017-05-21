@@ -11,7 +11,9 @@ module Jekyll
       def prepare(item)
         layout = item.data["layout"]
         begin
-          item.data.delete("layout")
+          # leave an explicit nil as layout to prevent jekyll from falling back to the default
+          # layout configured in the front matter defaults in _config.yml:
+          item.data["layout"] = nil
 
           if item.is_a?(Jekyll::Document)          
             output = Jekyll::Renderer.new(@site, item).run
@@ -27,10 +29,10 @@ module Jekyll
         output
       end
 
-      # render the item, parse the output and get all text inside <p> elements
+      # render the item, parse the output and get all inner text (i.e. non-markup)
+      # http://www.rubydoc.info/github/sparklemotion/nokogiri/Nokogiri%2FXML%2FNodeSet:inner_text
       def render(item)
         layoutless = item.dup
-
         Nokogiri::HTML(prepare(layoutless)).text
       end
     end
