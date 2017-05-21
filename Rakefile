@@ -57,25 +57,22 @@ task :concat_js do
 end
 
 task :minify_js do
-  minified, map = Uglifier.new.compile(File.read('build/search.js'))
-  File.open('build/search.min.js', 'w') do |file|
-    file.puts minified
-  end
-  minified_standalone, map = Uglifier.new.compile(File.read('build/jquery.lunr.search.js'))
-  File.open('build/jquery.lunr.search.min.js', 'w') do |file|
-    file.puts minified_standalone
-  end
-  minified_lunr, map = Uglifier.new.compile(File.read('build/lunr.js'))
-  File.open('build/lunr.min.js', 'w') do |file|
-    file.puts minified_lunr
-  end
-end
-
-task :minify_js_map do
   minified, map = Uglifier.new.compile_with_map(File.read('build/search.js'))
   File.open('build/search.js.map', 'w') { |file| file.write(map) }
   File.open('build/search.min.js', 'w') do |file|
     file.puts minified
     file.write "//# sourceMappingURL=search.js.map"
+  end
+  minified_standalone, map = Uglifier.new.compile_with_map(File.read('build/jquery.lunr.search.js'))
+  File.open('build/jquery.lunr.search.js.map', 'w') { |file| file.write(map) }
+  File.open('build/jquery.lunr.search.min.js', 'w') do |file|
+    file.puts minified_standalone
+    file.write "//# sourceMappingURL=jquery.lunr.search.js.map"
+  end
+  minified_lunr, map = Uglifier.new.compile_with_map(File.read('build/lunr.js'))
+  File.open('build/lunr.js.map', 'w') { |file| file.write(map) }
+  File.open('build/lunr.min.js', 'w') do |file|
+    file.puts minified_lunr
+    file.write "//# sourceMappingURL=lunr.js.map"
   end
 end
